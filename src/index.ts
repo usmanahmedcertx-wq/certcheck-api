@@ -96,6 +96,31 @@ export default {
         return json({ ok: true, id })
       }
 
+      const csv = path.match(/^\/audits\/(\d+)\/export\.csv$/)
+      if (csv && req.method === "GET") {
+        const auditId = Number(csv[1])
+        // Permission first, and independently of any flag.
+        if (!(await auditBelongsToOrg(env, auditId, orgId))) return json({ error: "not found" }, 404)
+
+        const { results } = await env.DB
+          .prepare("SELECT clause, text, status, note FROM requirement WHERE audit_id = ?1 ORDER BY id")
+          .bind(auditId)
+          .all<{ clause: string; text: string; status: string; note: string | null }>()
+
+        const esc = (v: string | null) => `"${(v ?? "").replace(/"/g, '""')}"`
+        const body = ["clause,text,status,note"]
+          .concat(results.map((r) => [r.clause, r.text, r.status, r.note].map(esc).join(",")))
+          .join("\n")
+
+        return new Response(body, {
+          headers: {
+            ...CORS,
+            "content-type": "text/csv; charset=utf-8",
+            "content-disposition": `attachment; filename="audit-${auditId}.csv"`,
+          },
+        })
+      }
+
       return json({ error: "not found", path }, 404)
     } catch (err) {
       // Deliberately terse: the lab is public and error bodies are a classic
