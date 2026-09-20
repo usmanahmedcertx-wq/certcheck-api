@@ -1,0 +1,53 @@
+# ===========================================================================
+# ACT 1 -- the "before" picture. Copy to .github/workflows/deploy.yml in BOTH
+# certcheck-api and certcheck-web.
+#
+# This is a faithful reproduction of how NirmatAI deploys today, and every
+# weakness in it is deliberate:
+#   * no `pull_request` trigger, so nothing is checked before a merge  (F3)
+#   * no `environment:`, so nothing is approved before production      (F4)
+#   * one build per branch, so demo and production never run the same
+#     bytes                                                            (F2)
+# Act 2 adds the gates. Act 3 replaces this file with act3-deploy.yml.
+# ===========================================================================
+name: deploy
+
+on:
+  push:
+    branches: [dev, demo]
+    tags: ['v*']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Pick an environment from the ref
+        id: env
+        run: |
+          case "${GITHUB_REF}" in
+            refs/heads/dev)  echo "name=dev"  >> "$GITHUB_OUTPUT" ;;
+            refs/heads/demo) echo "name=demo" >> "$GITHUB_OUTPUT" ;;
+            refs/tags/v*)    echo "name=prod" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Unexpected ref ${GITHUB_REF}"; exit 1 ;;
+          esac
+
+      # A different build for each environment. This one line is finding F2.
+      - name: Build for this environment
+        run: npm run build:${{ steps.env.outputs.name }}
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env ${{ steps.env.outputs.name }}
+
+    # ACT 2: uncomment the next line. Until you do, a tag reaches production
+    # with nobody approving it.
+    # environment: ${{ steps.env.outputs.name }}
