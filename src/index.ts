@@ -145,6 +145,24 @@ export default {
         }
       }
 
+      if (path === "/requirements/bulk-status" && req.method === "POST") {
+        const { audit_id, ids, status } = (await req.json()) as {
+          audit_id: number
+          ids: number[]
+          status: string
+        }
+
+        if (!VALID_STATUS.has(status)) return json({ error: "bad status" }, 400)
+        if (!(await auditBelongsToOrg(env, audit_id, orgId))) return json({ error: "not found" }, 404)
+
+        await env.DB
+          .prepare("UPDATE requirement SET status = ?2 WHERE audit_id = ?1")
+          .bind(audit_id, status)
+          .run()
+
+        return json({ ok: true, updated: ids.length })
+      }
+
       return json({ error: "not found", path }, 404)
     } catch (err) {
       // Deliberately terse: the lab is public and error bodies are a classic
