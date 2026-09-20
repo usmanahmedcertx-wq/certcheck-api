@@ -121,6 +121,30 @@ export default {
         })
       }
 
+      const comments = path.match(/^\/requirements\/(\d+)\/comments$/)
+      if (comments) {
+        const reqId = Number(comments[1])
+        if (!(await requirementBelongsToOrg(env, reqId, orgId))) return json({ error: "not found" }, 404)
+
+        if (req.method === "GET") {
+          const { results } = await env.DB
+            .prepare("SELECT id, body, created_at FROM comment WHERE requirement_id = ?1 ORDER BY id")
+            .bind(reqId)
+            .all()
+          return json(results)
+        }
+
+        if (req.method === "POST") {
+          const { body } = (await req.json()) as { body?: string }
+          if (!body?.trim()) return json({ error: "body is required" }, 400)
+          await env.DB
+            .prepare("INSERT INTO comment (requirement_id, body) VALUES (?1, ?2)")
+            .bind(reqId, body.trim())
+            .run()
+          return json({ ok: true }, 201)
+        }
+      }
+
       return json({ error: "not found", path }, 404)
     } catch (err) {
       // Deliberately terse: the lab is public and error bodies are a classic
