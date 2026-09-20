@@ -1,0 +1,58 @@
+{
+	// Three environments, three Workers, three databases. Everything that
+	// differs between them is a var or a binding -- nothing is compiled in.
+	// BUILD_SHA and BUNDLE_HASH are deliberately absent: CI injects them at
+	// upload time, so a local build reports "local" and a released build
+	// reports its real identity.
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "certcheck-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-01",
+	"observability": {
+		"enabled": true
+	},
+	"env": {
+		"dev": {
+			"name": "certcheck-api-dev",
+			"vars": {
+				"ENVIRONMENT": "dev",
+				"FLAGS_FORCED_OFF": ""
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "certcheck-dev",
+					"database_id": "9bb953a1-9e0b-4b5e-98a6-400f923bfcde"
+				}
+			]
+		},
+		"demo": {
+			"name": "certcheck-api-demo",
+			"vars": {
+				"ENVIRONMENT": "demo",
+				"FLAGS_FORCED_OFF": ""
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "certcheck-demo",
+					"database_id": "a97db604-7fa2-455f-9b20-35c828856f82"
+				}
+			]
+		},
+		"prod": {
+			"name": "certcheck-api-prod",
+			"vars": {
+				"ENVIRONMENT": "prod",
+				"FLAGS_FORCED_OFF": ""
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "certcheck-prod",
+					"database_id": "f0788b83-96da-4add-b9b2-789bde55ac6f"
+				}
+			]
+		}
+	}
+}
