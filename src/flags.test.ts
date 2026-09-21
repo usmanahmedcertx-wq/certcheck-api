@@ -20,8 +20,8 @@ describe("resolveFlags", () => {
   })
 
   it("never lets a pilot list turn a flag off", async () => {
-  const rows = [{ key: "A", enabled: 1, org_ids: "[7]" }]
-  expect((await resolveFlags(envWith(rows), 1)).A).toBe(false)   // was true
+    const rows = [{ key: "A", enabled: 1, org_ids: "[7]" }]
+    expect((await resolveFlags(envWith(rows), 1)).A).toBe(true)
   })
 
   it("lets the emergency brake outrank the table", async () => {
